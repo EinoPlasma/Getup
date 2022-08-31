@@ -60,11 +60,9 @@ contract Getup{
         _SimpleAddrOfCretaionContract=SimpleAddrOfCretaionContract;
         _PreviousContractAddr=PreviousContractAddr;
         //填时间日期要修改“gen_合约.py”的三处！！是三处！！
-        cheque_getups.push(Cheque_getup('2022-8-29 7:00:00 Delay:24',5000,1000,700,1661727600,1661814000,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-8-30 7:00:00 Delay:24',5000,1000,700,1661814000,1661900400,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-8-31 7:00:00 Delay:24',5000,1000,700,1661900400,1661986800,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-9-1 7:00:00 Delay:24',5000,1000,700,1661986800,1662073200,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-9-2 7:00:00 Delay:24',5000,1000,700,1662073200,1662159600,false,false,0,0));
+        cheque_getups.push(Cheque_getup('2022-8-31 7:00:00 Delay:24',2500,1000,1661900400,60,1661986800,false,false,0,0));
+        cheque_getups.push(Cheque_getup('2022-9-1 7:00:00 Delay:24',2500,1000,1661986800,60,1662073200,false,false,0,0));
+        cheque_getups.push(Cheque_getup('2022-9-2 7:00:00 Delay:24',2500,1000,1662073200,60,1662159600,false,false,0,0));
         //填时间日期要修改“gen_合约.py”的三处！！是三处！！
         _verify_nonce=random(99999999,95430382304);
     }
@@ -160,13 +158,15 @@ contract Getup{
 
             //有Bug：700和655之间是差了5分钟，而不是55分钟
             uint256 the_amount_not_achieved;
+            uint late_time;
             if(_IS_REVERSE){
-                uint late_time=cheque_getups[cheque_id].getup_time_limit-getup_time;
+                late_time=cheque_getups[cheque_id].getup_time_limit-getup_time;
             }else{
-                uint late_time=getup_time-cheque_getups[cheque_id].getup_time_limit;
+                late_time=getup_time-cheque_getups[cheque_id].getup_time_limit;
             }
             the_amount_not_achieved=cheque_getups[cheque_id].amount_achieved-cheque_getups[cheque_id].amount_not_achieved;
-            if(late_time>25){//防止减出负数
+            if(late_time>25){
+                //防止减出负数
                 the_amount_not_achieved=cheque_getups[cheque_id].amount_not_achieved;
             }else{
                 the_amount_not_achieved=the_amount_not_achieved*(75-late_time*3)/100+cheque_getups[cheque_id].amount_not_achieved;
