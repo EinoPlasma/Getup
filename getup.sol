@@ -211,12 +211,15 @@ contract Getup{
         _verify_nonce=seed_int;
         return(cheque_getups[cheque_id]);
     }
-    function CreatSupplementaryCard(bytes memory SignedMessage,uint sig_time,uint seed_int) public virtual{
+    function CreatSupplementaryCard(bytes memory SignedMessage,uint sig_time,uint seed_int,uint verify_nonce) public virtual{
+        require(verify_nonce==_verify_nonce,"Invalid verify nonce! ");
         msg_hash=keccak256(abi.encode(_SimpleAddrOfCretaionContract,sig_time,seed_int,_simple_addr));
         require(verify(_signer,msg_hash,SignedMessage),"Invalid signature! ");
-        //Bug 重入攻击 coded-Yes; tested_No
-        //Bug 覆写攻击 coded-Yes; tested_No
+        //Bug 重入攻击：用一次签名在一个合约内创建多张补签卡 coded-Yes; tested_No
+        //Bug 覆写攻击：用相同签名把使用过的补签卡覆写为未使用的 coded-Yes; tested_No
+        //Bug 重入攻击：用一次签名给多个合约补签
         _CreatSupplementaryCard(seed_int);
+        _verify_nonce=seed_int;
     }
     function IncreaseDifficulty(uint cheque_id,uint new_getup_time) public virtual returns(bool){
         bool is_achieved=false;
