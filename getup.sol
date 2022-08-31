@@ -34,6 +34,8 @@ contract Getup{
     uint[] public supplementary_cards_ID;
     mapping (uint => SupplementaryCard) public _SupplementaryCards;
 
+    address public _PreviousContractAddr;
+    bool public _IS_REVERSE;
     address public _addr_ERC20;
     address public _signer;
     address public _receiver;
@@ -47,7 +49,8 @@ contract Getup{
     uint public PercentWinningChance=100;
 
 
-    constructor(string memory name, address erc20_addr, string memory simple_addr,address signer,address receiver,string memory SimpleAddrOfCretaionContract){
+    constructor(bool IS_REVERSE ,string memory name, address erc20_addr, string memory simple_addr,address signer,address receiver,string memory SimpleAddrOfCretaionContract,address PreviousContractAddr){
+        _IS_REVERSE=IS_REVERSE;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
         _name=name;
         _addr_ERC20=erc20_addr;
         _receiver=receiver;
@@ -55,6 +58,7 @@ contract Getup{
         _simple_addr=simple_addr;
         _signer=signer;
         _SimpleAddrOfCretaionContract=SimpleAddrOfCretaionContract;
+        _PreviousContractAddr=PreviousContractAddr;
         //填时间日期要修改“gen_合约.py”的三处！！是三处！！
         cheque_getups.push(Cheque_getup('2022-8-29 7:00:00 Delay:24',5000,1000,700,1661727600,1661814000,false,false,0,0));
         cheque_getups.push(Cheque_getup('2022-8-30 7:00:00 Delay:24',5000,1000,700,1661814000,1661900400,false,false,0,0));
@@ -79,6 +83,7 @@ contract Getup{
         }
 
     }
+
     function lottery(uint random_10000,uint percent_winning_chance,uint256 percent_bonus) internal returns(uint256){
         require(random_10000<=10000,"random_10000 must <=10000");
 
@@ -120,6 +125,9 @@ contract Getup{
         require(sig_time>=cheque_getups[cheque_id].sig_after,"Too early to sign! sig_time<=cheque_getups[cheque_id].sig_after");
         require(!cheque_getups[cheque_id].is_used,"You have fetched! ");
         uint256 amount_to_transfer=0;
+        
+
+        
         if(sig_time>cheque_getups[cheque_id].sig_before){
             //"Too late to sign! sig_time>=cheque_getups[cheque_id].sig_before"
             //use Supplementary Card
@@ -130,7 +138,17 @@ contract Getup{
             _SupplementaryCards[id_supplementary_card].is_used=true;
             emit SupplementaryCardUsed(_SupplementaryCards[id_supplementary_card]);
         }
+        bool is_achieved=false;
         if(getup_time<=cheque_getups[cheque_id].getup_time_limit){
+            is_achieved=true;
+        }else{
+            is_achieved=false;
+        }
+        //REVERSE!!
+        if(_IS_REVERSE){
+            is_achieved=!is_achieved;
+        }
+        if(is_achieved){
             amount_to_transfer+=cheque_getups[cheque_id].amount_achieved;
             cheque_getups[cheque_id].is_achieved=true;
         }else{
@@ -142,7 +160,11 @@ contract Getup{
 
             //有Bug：700和655之间是差了5分钟，而不是55分钟
             uint256 the_amount_not_achieved;
-            uint late_time=getup_time-cheque_getups[cheque_id].getup_time_limit;
+            if(_IS_REVERSE){
+                uint late_time=cheque_getups[cheque_id].getup_time_limit-getup_time;
+            }else{
+                uint late_time=getup_time-cheque_getups[cheque_id].getup_time_limit;
+            }
             the_amount_not_achieved=cheque_getups[cheque_id].amount_achieved-cheque_getups[cheque_id].amount_not_achieved;
             if(late_time>25){//防止减出负数
                 the_amount_not_achieved=cheque_getups[cheque_id].amount_not_achieved;
@@ -197,7 +219,17 @@ contract Getup{
         _CreatSupplementaryCard(seed_int);
     }
     function IncreaseDifficulty(uint cheque_id,uint new_getup_time) public virtual returns(bool){
+        bool is_achieved=false;
         if(new_getup_time<cheque_getups[cheque_id].getup_time_limit){
+            is_achieved=true;
+        }else{
+            is_achieved=false;
+        }
+        //REVERSE!!
+        if(_IS_REVERSE){
+            is_achieved=!is_achieved;
+        }
+        if(is_achieved){
             cheque_getups[cheque_id].getup_time_limit=new_getup_time;
             return(true);
         }else{
