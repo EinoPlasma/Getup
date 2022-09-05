@@ -115,17 +115,25 @@ contract Getup{
     }
 
 
-    function do_fetch_cheque(uint cheque_id, bytes memory SignedMessage, uint getup_time ,uint sig_time, uint order_supplementary_card,uint seed_int,uint verify_nonce) public virtual payable returns(Cheque_getup memory cheque_info){
+    function do_fetch_cheque(uint cheque_id, bytes memory SignedMessage, uint getup_time ,uint sig_time, uint order_supplementary_card,uint seed_int,uint verify_nonce,uint is_to_creat_supplementary_card) public virtual payable returns(Cheque_getup memory cheque_info){
         //verify_nonce: 第一次是constructor生成的随机数，之后是前一次fetch的seed_int
-        msg_hash=keccak256(abi.encode(_simple_addr,sig_time,seed_int,getup_time,verify_nonce));
+        //supplementary_cards_ID填999可以自动找到新加的补签卡
+        msg_hash=keccak256(abi.encode(_simple_addr,sig_time,seed_int,getup_time,is_to_creat_supplementary_card,verify_nonce));
         require(verify(_signer,msg_hash,SignedMessage),"Invalid signature! ");
         require(verify_nonce==_verify_nonce,"Invalid verify nonce! ");
         require(sig_time>=cheque_getups[cheque_id].sig_after,"Too early to sign! sig_time<=cheque_getups[cheque_id].sig_after");
         require(!cheque_getups[cheque_id].is_used,"You have fetched! ");
         uint256 amount_to_transfer=0;
         
+        if(is_to_creat_supplementary_card==1){
+            //可以在检验签名时间前先生成一张补签卡
+            _CreatSupplementaryCard(seed_int);
 
-        
+        }
+        if(order_supplementary_card==999){
+            //supplementary_cards_ID填999可以自动找到新加的补签卡
+            order_supplementary_card=supplementary_cards_ID.length-1;
+        }
         if(sig_time>cheque_getups[cheque_id].sig_before){
             //"Too late to sign! sig_time>=cheque_getups[cheque_id].sig_before"
             //use Supplementary Card
