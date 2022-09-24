@@ -6,10 +6,13 @@ import "./IERC20.sol";
 
 contract Getup{
     struct Cheque_getup{
+        string _simple_addr;
+        uint Temple;
         string name;
         uint256 amount_achieved;
         uint256 amount_not_achieved;
         uint getup_time_limit;
+        uint Append_Requirement_1;
         uint sig_after;
         uint sig_before;
         bool is_used;
@@ -35,34 +38,33 @@ contract Getup{
     mapping (uint => SupplementaryCard) public _SupplementaryCards;
 
     address public _PreviousContractAddr;
-    bool public _IS_REVERSE;
     address public _addr_ERC20;
     address public _signer;
     address public _receiver;
-    string public _simple_addr;
+    //string public _simple_addr;
     string public _SimpleAddrOfCretaionContract;
     string public _name;
     bytes32 public msg_hash;
     uint public _verify_nonce;//通过在监督前一天的下午生成随机数，第二天把随机数写在纸上或拍视频，防止作弊。
-
+    bool public _IS_REVERSE=false;
     uint public PercentPonus=100;
     uint public PercentWinningChance=100;
 
 
-    constructor(bool IS_REVERSE ,string memory name, address erc20_addr, string memory simple_addr,address signer,address receiver,string memory SimpleAddrOfCretaionContract,address PreviousContractAddr){
-        _IS_REVERSE=IS_REVERSE;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
+    constructor(string memory name, address erc20_addr,address signer,address receiver,string memory SimpleAddrOfCretaionContract,address PreviousContractAddr){
+
         _name=name;
         _addr_ERC20=erc20_addr;
         _receiver=receiver;
         erc20=IERC20(_addr_ERC20);
-        _simple_addr=simple_addr;
+        //_simple_addr=simple_addr;
         _signer=signer;
         _SimpleAddrOfCretaionContract=SimpleAddrOfCretaionContract;
         _PreviousContractAddr=PreviousContractAddr;
         //填时间日期要修改“gen_合约.py”的三处！！是三处！！
-        cheque_getups.push(Cheque_getup('2022-8-31 7:00:00 Delay:24',2500,1000,1661900400,60,1661986800,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-9-1 7:00:00 Delay:24',2500,1000,1661986800,60,1662073200,false,false,0,0));
-        cheque_getups.push(Cheque_getup('2022-9-2 7:00:00 Delay:24',2500,1000,1662073200,60,1662159600,false,false,0,0));
+        cheque_getups.push(Cheque_getup('0XOADTGQ',2,'2022-9-22 13:00:00 Delay:24',3000,1000,1250,5,1663822800,1663909200,false,false,0,0));
+        cheque_getups.push(Cheque_getup('0XOADTGQ',2,'2022-9-23 13:00:00 Delay:24',3000,1000,1250,5,1663909200,1663995600,false,false,0,0));
+        cheque_getups.push(Cheque_getup('0XOADTGQ',2,'2022-9-24 13:00:00 Delay:24',3000,1000,1250,5,1663995600,1664082000,false,false,0,0));
         //填时间日期要修改“gen_合约.py”的三处！！是三处！！
         _verify_nonce=random(99999999,95430382304);
     }
@@ -113,17 +115,104 @@ contract Getup{
         }
         return(hongbao);
     }
+    function count_amount_not_achieved() public pure returns(uint256){
+
+    }
+
+    function do_fetch_cheque(uint cheque_id, bytes memory SignedMessage, uint getup_time ,uint sig_time, uint order_supplementary_card,uint seed_int,uint verify_nonce,uint is_to_creat_supplementary_card,uint Append_Requirement_1) public virtual payable returns(Cheque_getup memory cheque_info){
+        uint256 amount_to_transfer=0;
+        bool is_achieved=false;
+        
+        //Temple:0-早起，1-背英语，2-早睡
+        if(cheque_getups[cheque_id].Temple==1){
+            //背英语
+            //以下是一些前置条件，如：提交时间在1800前
+            //Append_Requirement_1:比如说你要确保在18点前背英语，或者是你要在23点前查手机
+            require(Append_Requirement_1<cheque_getups[cheque_id].Append_Requirement_1,"Committing time too late! ");
+
+            
+            msg_hash=keccak256(abi.encode(cheque_getups[cheque_id]._simple_addr,sig_time,seed_int,getup_time,Append_Requirement_1,is_to_creat_supplementary_card,verify_nonce));
+
+            _IS_REVERSE=true;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
+            
+            if(getup_time<cheque_getups[cheque_id].getup_time_limit){
+                is_achieved=true;
+            }else{
+                is_achieved=false;
+            }
+            //REVERSE!!
+            if(_IS_REVERSE){
+                is_achieved=!is_achieved;
+            }
+        }
+        if(cheque_getups[cheque_id].Temple==2){
+            //早睡
+            //Append_Requirement_1:电子设备数>=5
+            require(Append_Requirement_1>=cheque_getups[cheque_id].Append_Requirement_1,"The number of devices less then expected! ");
+
+            msg_hash=keccak256(abi.encode(cheque_getups[cheque_id]._simple_addr,sig_time,seed_int,getup_time,Append_Requirement_1,is_to_creat_supplementary_card,verify_nonce));
+
+            _IS_REVERSE=false;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
+            
+            if(getup_time<cheque_getups[cheque_id].getup_time_limit){
+                is_achieved=true;
+            }else{
+                is_achieved=false;
+            }
+            //REVERSE!!
+            if(_IS_REVERSE){
+                is_achieved=!is_achieved;
+            }
+        }        
+        if(cheque_getups[cheque_id].Temple==0){
+            //早起
+            //Append_Requirement_1:无
+            //require(Append_Requirement_1>=cheque_getups[cheque_id].Append_Requirement_1,"The number of devices less then expected! ");
 
 
-    function do_fetch_cheque(uint cheque_id, bytes memory SignedMessage, uint getup_time ,uint sig_time, uint order_supplementary_card,uint seed_int,uint verify_nonce,uint is_to_creat_supplementary_card) public virtual payable returns(Cheque_getup memory cheque_info){
+            msg_hash=keccak256(abi.encode(cheque_getups[cheque_id]._simple_addr,sig_time,seed_int,getup_time,is_to_creat_supplementary_card,verify_nonce));
+
+            _IS_REVERSE=false;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
+            
+            if(getup_time<cheque_getups[cheque_id].getup_time_limit){
+                is_achieved=true;
+            }else{
+                is_achieved=false;
+            }
+            //REVERSE!!
+            if(_IS_REVERSE){
+                is_achieved=!is_achieved;
+            }
+        }    
+        if(cheque_getups[cheque_id].Temple==3){
+            //跑步
+            //Append_Requirement_1:无
+            //require(Append_Requirement_1>=cheque_getups[cheque_id].Append_Requirement_1,"The number of devices less then expected! ");
+
+            msg_hash=keccak256(abi.encode(cheque_getups[cheque_id]._simple_addr,sig_time,seed_int,getup_time,is_to_creat_supplementary_card,verify_nonce));
+
+            _IS_REVERSE=true;//填False：如早睡早起监督，要求实际值<limit。填True：如背英语监督，要求实际值>limit。
+            
+            if(getup_time<cheque_getups[cheque_id].getup_time_limit){
+                is_achieved=true;
+            }else{
+                is_achieved=false;
+            }
+            //REVERSE!!
+            if(_IS_REVERSE){
+                is_achieved=!is_achieved;
+            }
+        }     
+        
+
         //verify_nonce: 第一次是constructor生成的随机数，之后是前一次fetch的seed_int
         //supplementary_cards_ID填999可以自动找到新加的补签卡
-        msg_hash=keccak256(abi.encode(_simple_addr,sig_time,seed_int,getup_time,is_to_creat_supplementary_card,verify_nonce));
+
         require(verify(_signer,msg_hash,SignedMessage),"Invalid signature! ");
         require(verify_nonce==_verify_nonce,"Invalid verify nonce! ");
         require(sig_time>=cheque_getups[cheque_id].sig_after,"Too early to sign! sig_time<=cheque_getups[cheque_id].sig_after");
         require(!cheque_getups[cheque_id].is_used,"You have fetched! ");
-        uint256 amount_to_transfer=0;
+        
         
         if(is_to_creat_supplementary_card==1){
             //可以在检验签名时间前先生成一张补签卡
@@ -144,16 +233,7 @@ contract Getup{
             _SupplementaryCards[id_supplementary_card].is_used=true;
             emit SupplementaryCardUsed(_SupplementaryCards[id_supplementary_card]);
         }
-        bool is_achieved=false;
-        if(getup_time<=cheque_getups[cheque_id].getup_time_limit){
-            is_achieved=true;
-        }else{
-            is_achieved=false;
-        }
-        //REVERSE!!
-        if(_IS_REVERSE){
-            is_achieved=!is_achieved;
-        }
+
         if(is_achieved){
             amount_to_transfer+=cheque_getups[cheque_id].amount_achieved;
             cheque_getups[cheque_id].is_achieved=true;
@@ -167,6 +247,7 @@ contract Getup{
             //有Bug：700和655之间是差了5分钟，而不是55分钟
             uint256 the_amount_not_achieved;
             uint late_time;
+            
             if(_IS_REVERSE){
                 late_time=cheque_getups[cheque_id].getup_time_limit-getup_time;
             }else{
@@ -178,8 +259,7 @@ contract Getup{
                 the_amount_not_achieved=cheque_getups[cheque_id].amount_not_achieved;
             }else{
                 the_amount_not_achieved=the_amount_not_achieved*(75-late_time*3)/100+cheque_getups[cheque_id].amount_not_achieved;
-            }
-            
+            }        
             amount_to_transfer+=the_amount_not_achieved;
         }
 
@@ -190,8 +270,8 @@ contract Getup{
         }
         if (cheque_getups[cheque_id].is_achieved==false){
             //未达成惩罚
-            PercentWinningChance=90;
-            PercentPonus=90;
+            //PercentWinningChance=90;
+            //PercentPonus=90;
         }
         if (cheque_id>0&&cheque_getups[cheque_id-1].is_used==false&&cheque_id>1){
             //昨天未签到惩罚
@@ -219,9 +299,9 @@ contract Getup{
         _verify_nonce=seed_int;
         return(cheque_getups[cheque_id]);
     }
-    function CreatSupplementaryCard(bytes memory SignedMessage,uint sig_time,uint seed_int,uint verify_nonce) public virtual{
+    function CreatSupplementaryCard(bytes memory SignedMessage,uint sig_time,uint seed_int,uint verify_nonce,string memory simple_addr) public virtual{
         require(verify_nonce==_verify_nonce,"Invalid verify nonce! ");
-        msg_hash=keccak256(abi.encode(_SimpleAddrOfCretaionContract,sig_time,seed_int,_simple_addr));
+        msg_hash=keccak256(abi.encode(_SimpleAddrOfCretaionContract,sig_time,seed_int,simple_addr));
         require(verify(_signer,msg_hash,SignedMessage),"Invalid signature! ");
         //Bug 重入攻击：用一次签名在一个合约内创建多张补签卡 coded-Yes; tested_No
         //Bug 覆写攻击：用相同签名把使用过的补签卡覆写为未使用的 coded-Yes; tested_No
@@ -229,6 +309,7 @@ contract Getup{
         _CreatSupplementaryCard(seed_int);
         _verify_nonce=seed_int;
     }
+    /*
     function IncreaseDifficulty(uint cheque_id,uint new_getup_time) public virtual returns(bool){
         bool is_achieved=false;
         if(new_getup_time<cheque_getups[cheque_id].getup_time_limit){
@@ -248,6 +329,7 @@ contract Getup{
         }
 
     }
+    */
     function SetReceiver(address receiver) public virtual returns(bool){
         if(receiver!=_receiver){
             _receiver=receiver;
@@ -257,14 +339,6 @@ contract Getup{
         }
     }
 
-    function hash_test(uint getup_time ,uint sig_time,uint buqianka,uint random_int) public virtual returns(bytes32){
-        msg_hash=keccak256(abi.encode(_simple_addr,sig_time,random_int,getup_time,buqianka));
-        return msg_hash;
-
-    }    
-
-
-    
     // 输入 签名地址，未被签名的数据，签名后的数据
     function verify(
         address _ValidSigner,
